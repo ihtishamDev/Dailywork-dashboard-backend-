@@ -24,7 +24,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 def create_task(task: TaskCreate):
     return add_task(task)
 
-@router.get("/all")
+@router.get("/all")    
 def get_tasks():
     return get_all_tasks()
 
