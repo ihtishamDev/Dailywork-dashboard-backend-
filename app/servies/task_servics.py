@@ -35,7 +35,8 @@ def get_all_tasks():
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM tasks")
+    # ✅ UI: latest task on top
+    cursor.execute("SELECT * FROM tasks ORDER BY id DESC")
     tasks = cursor.fetchall()
 
     cursor.close()

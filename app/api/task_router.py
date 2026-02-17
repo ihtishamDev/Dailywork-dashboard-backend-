@@ -1,4 +1,4 @@
-from fastapi import UploadFile, File, HTTPException
+from fastapi import UploadFile, File, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from io import StringIO
 import csv
@@ -7,7 +7,13 @@ import json
 import pandas as pd
 from docx import Document
 from app.db.database import get_connection
-
+from app.servies.task_servics import (
+    add_task,
+    get_all_tasks,
+    delete_task_by_id,
+    update_task_by_id
+)
+from app.servies.task_export_service import export_tasks_file  # ✅ NEW
 
 from fastapi import APIRouter
 from app.schema.schema import TaskCreate, TaskResponse
@@ -47,40 +53,49 @@ HEADERS = [
     "id", "priority", "work_needed",
     "phone_number", "email", "notes", "status"
 ]
-
-
+# ✅ NEW: Export in multiple formats
 @router.get("/export")
-def export_tasks_csv():
-    conn = get_connection()
-    cursor = conn.cursor(dictionary=True)
+def export_tasks(format: str = Query("csv", description="csv | xlsx | docx | pdf")):
+    file_stream, filename, media_type = export_tasks_file(format=format)
 
-    cursor.execute("SELECT id, priority, work_needed, phone_number, email, notes, status FROM tasks")
-    tasks = cursor.fetchall()
-
-    output = StringIO()
-    writer = csv.DictWriter(output, fieldnames=HEADERS)
-    writer.writeheader()
-
-    for task in tasks:
-        writer.writerow({
-            "id": task.get("id", ""),
-            "priority": task.get("priority", ""),
-            "work_needed": task.get("work_needed", ""),
-            "phone_number": task.get("phone_number", ""),
-            "email": task.get("email", ""),
-            "notes": task.get("notes") or "",
-            "status": task.get("status", ""),
-        })
-
-    cursor.close()
-    conn.close()
-
-    output.seek(0)
     return StreamingResponse(
-        output,
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=tasks.csv"}
+        file_stream,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+
+# @router.get("/export")
+# def export_tasks_csv():
+#     conn = get_connection()
+#     cursor = conn.cursor(dictionary=True)
+
+#     cursor.execute("SELECT id, priority, work_needed, phone_number, email, notes, status FROM tasks")
+#     tasks = cursor.fetchall()
+
+#     output = StringIO()
+#     writer = csv.DictWriter(output, fieldnames=HEADERS)
+#     writer.writeheader()
+
+#     for task in tasks:
+#         writer.writerow({
+#             "id": task.get("id", ""),
+#             "priority": task.get("priority", ""),
+#             "work_needed": task.get("work_needed", ""),
+#             "phone_number": task.get("phone_number", ""),
+#             "email": task.get("email", ""),
+#             "notes": task.get("notes") or "",
+#             "status": task.get("status", ""),
+#         })
+
+#     cursor.close()
+#     conn.close()
+
+#     output.seek(0)
+#     return StreamingResponse(
+#         output,
+#         media_type="text/csv",
+#         headers={"Content-Disposition": "attachment; filename=tasks.csv"}
+#     )
 
 
 def read_file_upload(file: UploadFile):
